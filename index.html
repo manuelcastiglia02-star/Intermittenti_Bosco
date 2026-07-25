@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Intermittenti</title>
+</head>
+
+<body>
+    <h2>Comunicazione Intermittenti</h2>
+    <label>
+        CF Datore
+        <input id="cf" value="0123456789" readonly>
+    </label>
+    <br><label>Email <input id="email" value="test@hotmail.it" readonly></label><br>
+    <label class="checkbox-label">
+        <input type="checkbox" id="annulla">
+        Annullamento
+    </label>
+    <div id="workers"></div>
+    <button onclick="addWorker()">+ Lavoratore</button>
+    <button onclick="downloadXML()">Genera XML</button>
+    <script>
+
+        let n = 0;
+
+        // ARCHIVIO LAVORATORI STATICO
+        const lavoratori = {
+            "rr": {
+                cf: "rr",
+                cc: "rr"
+            },
+            "ee": {
+                cf: "ee",
+                cc: "ee"
+            },
+            "ff": {
+                cf: "ff",
+                cc: "ff"
+            },
+            "gg": {
+                cf: "gg",
+                cc: "gg"
+            }
+        };
+
+
+        function addWorker() {
+
+            n++;
+
+            let d = document.createElement("div");
+
+            d.className = "worker";
+
+            d.innerHTML = `
+
+    <hr>
+
+    <h3>Lavoratore ${n}</h3>
+
+    <label>
+        Seleziona lavoratore
+        <select class="nome" onchange="compilaLavoratore(this)">
+            <option value="">-- seleziona --</option>
+
+            ${Object.keys(lavoratori)
+                    .map(nome =>
+                        `<option value="${nome}">${nome}</option>`
+                    )
+                    .join("")}
+
+        </select>
+    </label>
+
+
+    <label>
+        Codice fiscale
+        <input type="text" class="cf">
+    </label>
+
+
+    <label>
+        Codice comunicazione
+        <input type="text" class="cc">
+    </label>
+
+
+    <label>
+        Data inizio
+        <input type="date" class="di">
+    </label>
+
+
+    <label>
+        Data fine
+        <input type="date" class="df">
+    </label>
+
+    `;
+
+
+            document
+                .getElementById("workers")
+                .appendChild(d);
+
+        }
+
+
+        addWorker();
+
+
+
+        function compilaLavoratore(select) {
+
+            let nome = select.value;
+
+            if (nome === "")
+                return;
+
+
+            let dati = lavoratori[nome];
+
+            let worker = select.closest(".worker");
+
+
+            worker.querySelector(".cf").value = dati.cf;
+
+            worker.querySelector(".cc").value = dati.cc;
+
+        }
+
+
+
+        function downloadXML() {
+
+
+            const cfDatore =
+                document.getElementById("cf").value.trim();
+
+
+            const email =
+                document.getElementById("email").value.trim();
+
+
+            const annullamento =
+                document.getElementById("annulla").checked
+                    ? "On"
+                    : "Off";
+
+
+
+            let xml = `<?xml version="1.0" encoding="UTF-8"?>
+
+<document>
+
+<page number="1">
+<line>Comunicazione Obbligatoria Intermittenti</line>
+<line>Datore di Lavoro</line>
+<line>codice fiscale * e-mail *</line>
+<line>Elenco lavoratori - prestazioni lavorative</line>
+<line>Codice Fiscale lavoratore Codice comunicazione Data inizio Data fine</line>
+<line>Annullamento Selezionare la casella per effettuare l'ANNULLAMENTO delle prestazioni sopraindicate.</line>
+<line>I campi contrassegnati con * sono obbligatori.</line>
+</page>
+
+
+<fields>
+
+
+<field page="2">
+<name>moduloIntermittenti[0].Campi[0].CFdatorelavoro[0]</name>
+<value>${escapeXml(cfDatore)}</value>
+</field>
+
+
+<field page="2">
+<name>moduloIntermittenti[0].Campi[0].BCbarcodeModello01[0]</name>
+<value>ML-15-01</value>
+</field>
+
+
+<field page="2">
+<name>moduloIntermittenti[0].Campi[0].BCbarcodeModello01[1]</name>
+<value>ML-15-01</value>
+</field>
+
+
+<field page="2">
+<name>moduloIntermittenti[0].Campi[0].EMmail[0]</name>
+<value>${escapeXml(email)}</value>
+</field>
+
+
+<field page="2">
+<name>moduloIntermittenti[0].Campi[0].ANannullamento[0]</name>
+<value>${annullamento}</value>
+</field>
+`;
+
+
+
+            const workers =
+                document.querySelectorAll(".worker");
+
+
+
+            workers.forEach((worker, index) => {
+
+
+                let r = index + 1;
+
+
+                const cf =
+                    worker.querySelector(".cf").value.trim();
+
+
+                const cc =
+                    worker.querySelector(".cc").value.trim();
+
+
+                const di =
+                    formattaData(
+                        worker.querySelector(".di").value
+                    );
+
+
+                const df =
+                    formattaData(
+                        worker.querySelector(".df").value
+                    );
+
+
+
+                xml += `
+
+<field page="2">
+<name>moduloIntermittenti[0].Campi[0].Table1[0].Row${r}[0].CFlavoratore${r}[0]</name>
+<value>${escapeXml(cf)}</value>
+</field>
+
+
+<field page="2">
+<name>moduloIntermittenti[0].Campi[0].Table1[0].Row${r}[0].CCcodcomunicazione${r}[0]</name>
+<value>${escapeXml(cc)}</value>
+</field>
+
+
+<field page="2">
+<name>moduloIntermittenti[0].Campi[0].Table1[0].Row${r}[0].DTdatainizio${r}[0]</name>
+<value>${di}</value>
+</field>
+`;
+
+
+                if (df) {
+
+                    xml += `
+
+<field page="2">
+<name>moduloIntermittenti[0].Campi[0].Table1[0].Row${r}[0].DTdatafine${r}[0]</name>
+<value>${df}</value>
+</field>
+
+`;
+
+                }
+
+
+            });
+
+
+
+            xml += `
+
+</fields>
+
+</document>`;
+
+
+
+
+            // SALVATAGGIO COMPATIBILE IOS / DOCUMENTS
+
+            const data =
+                "data:text/xml;charset=utf-8,"
+                +
+                encodeURIComponent(xml);
+
+
+
+            const link = document.createElement("a");
+
+            link.href = data;
+
+            link.download = "ComunicazioneIntermittenti.xml";
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            document.body.removeChild(link);
+
+
+        }
+
+
+
+
+        function escapeXml(str) {
+
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&apos;");
+
+        }
+
+
+
+
+        function formattaData(dataISO) {
+
+            if (!dataISO)
+                return "";
+
+            const p = dataISO.split("-");
+
+            return `${p[2]}/${p[1]}/${p[0]}`;
+
+        }
+
+
+    </script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #0ea5e9;
+            --success: #22c55e;
+            --background: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #cbd5e1;
+        }
+
+
+        * {
+            box-sizing: border-box;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+
+
+        body {
+
+            margin: 0;
+            padding: 25px;
+
+            background: var(--background);
+            color: var(--text);
+
+        }
+
+
+
+        .container {
+
+            width: 100%;
+            max-width: 750px;
+            margin: auto;
+
+        }
+
+
+
+        h2 {
+
+            text-align: center;
+
+            font-size: 28px;
+
+            color: #0f172a;
+
+            margin-bottom: 30px;
+
+            letter-spacing: .5px;
+
+        }
+
+
+        .campo {
+            margin-bottom: 18px;
+        }
+
+        .campo label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .campo input,
+        .campo select {
+            width: 100%;
+        }
+
+        /* FORM */
+
+        label {
+
+            display: flex;
+            flex-direction: column;
+
+            gap: 6px;
+
+            margin-bottom: 18px;
+
+            font-size: 15px;
+
+            font-weight: 600;
+
+        }
+
+
+
+        input:not([type="checkbox"]),
+        select {
+
+            -webkit-appearance: none;
+            appearance: none;
+
+            display: block;
+
+            width: 100%;
+            min-height: 48px;
+
+            padding: 13px 15px;
+
+            font-size: 16px;
+
+            color: #334155;
+
+            background: #fff;
+
+            border: 1px solid #cbd5e1;
+
+            border-radius: 12px;
+
+            outline: none;
+
+        }
+
+        select {
+
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M3.204 5h9.592L8 10.481z'/%3E%3C/svg%3E");
+
+            background-repeat: no-repeat;
+
+            background-position: right 12px center;
+
+            background-size: 16px;
+
+            padding-right: 40px;
+
+        }
+
+
+        /* CHECKBOX */
+
+        input[type="checkbox"] {
+
+            width: 18px;
+
+            height: 18px;
+
+            margin: 0 8px 0 0;
+
+            vertical-align: middle;
+
+            accent-color: var(--primary);
+
+            cursor: pointer;
+
+        }
+
+        .checkbox-label {
+
+            display: flex;
+
+            flex-direction: row;
+
+            align-items: center;
+
+            gap: 10px;
+
+            margin-top: 15px;
+
+            font-weight: 600;
+
+            cursor: pointer;
+
+        }
+
+
+        .checkbox-label input[type="checkbox"] {
+
+            width: 18px;
+
+            height: 18px;
+
+            margin: 0;
+
+            accent-color: #2563eb;
+
+        }
+
+        input:hover,
+        select:hover {
+
+            border-color: #94a3b8;
+
+        }
+
+
+
+        input:focus,
+        select:focus {
+
+            border-color: var(--primary);
+
+            box-shadow:
+                0 0 0 4px rgba(37, 99, 235, .12);
+
+        }
+
+
+
+        /* LAVORATORI */
+
+
+        #workers {
+
+            margin-top: 30px;
+
+        }
+
+
+
+        .worker {
+
+            background: var(--card);
+
+            padding: 22px;
+
+            margin-bottom: 22px;
+
+            border-radius: 20px;
+
+            border: 1px solid #e2e8f0;
+
+            box-shadow:
+
+                0 8px 25px rgba(15, 23, 42, .08);
+
+            transition: .2s;
+
+        }
+
+
+
+        .worker:hover {
+
+            transform: translateY(-2px);
+
+            box-shadow:
+
+                0 12px 30px rgba(15, 23, 42, .12);
+
+        }
+
+
+
+        .worker h3 {
+
+            margin:
+
+                0 0 18px 0;
+
+            padding-bottom: 10px;
+
+            border-bottom: 1px solid #e2e8f0;
+
+            color: var(--primary);
+
+            font-size: 20px;
+
+        }
+
+
+
+        hr {
+
+            display: none;
+
+        }
+
+
+
+        /* BOTTONI */
+
+
+        .actions {
+
+            display: flex;
+
+            justify-content: center;
+
+            gap: 15px;
+
+            margin-top: 30px;
+
+            flex-wrap: wrap;
+
+        }
+
+
+
+        button {
+
+            min-width: 220px;
+
+            padding: 14px 25px;
+
+            border: none;
+
+            border-radius: 14px;
+
+            font-size: 16px;
+
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition: .2s ease;
+
+            box-shadow:
+
+                0 5px 15px rgba(0, 0, 0, .12);
+
+        }
+
+
+
+        button:first-of-type {
+
+            background: var(--secondary);
+
+            color: white;
+
+        }
+
+
+
+        button:last-of-type {
+
+            background: var(--success);
+
+            color: white;
+
+        }
+
+
+
+        button:hover {
+
+            filter: brightness(1.05);
+
+            transform: translateY(-2px);
+
+        }
+
+
+
+        button:active {
+
+            transform: scale(.97);
+
+        }
+
+
+
+        /* MOBILE */
+
+
+        @media(max-width:600px) {
+
+
+            body {
+
+                padding: 15px;
+
+            }
+
+
+            h2 {
+
+                font-size: 23px;
+
+            }
+
+
+            .worker {
+
+                padding: 18px;
+
+                border-radius: 16px;
+
+            }
+
+
+            button {
+
+                width: 100%;
+
+                min-width: unset;
+
+            }
+
+
+        }
+    </style>
+</body>
+
+</html>
